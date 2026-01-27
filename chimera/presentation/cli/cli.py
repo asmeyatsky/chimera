@@ -25,6 +25,13 @@ def main():
     attach_parser = subparsers.add_parser("attach", help="Attach to a running Chimera session")
     attach_parser.add_argument("session_id", help="Session ID to attach to")
 
+    # Deploy Command
+    deploy_parser = subparsers.add_parser("deploy", help="Deploy to a fleet of nodes")
+    deploy_parser.add_argument("--targets", "-t", required=True, help="Comma-separated list of targets (user@host:port)")
+    deploy_parser.add_argument("--config", "-c", default="default.nix", help="Path to Nix config")
+    deploy_parser.add_argument("--session", "-s", default="chimera-deploy", help="Remote session name")
+    deploy_parser.add_argument("script_cmd", help="Command to run remotely")
+
     args = parser.parse_args()
 
     if args.command == "run":
@@ -38,13 +45,36 @@ def main():
             print(f"[+] Deployment Successful. Session '{session_id}' is active.")
             print(f"[*] To attach: chimera attach {session_id}")
             
-            # Optional: Auto-attach? PRD says "chimera attach from your desktop", implying separate step sometimes.
-            # But "Local-First" might want immediate feedback.
-            # Let's offer to attach? Or just exit. PRD says: "wraps any Python script... and run it inside a persistent Tmux session locally."
-            
         except Exception as e:
             print(f"[-] Deployment Failed: {e}")
             sys.exit(1)
+
+    elif args.command == "deploy":
+        from chimera.application.use_cases.deploy_fleet import DeployFleet
+        from chimera.infrastructure.adapters.fabric_adapter import FabricAdapter
+        
+        nix_adapter = NixAdapter()
+        fabric_adapter = FabricAdapter()
+        # SessionPort for local? we pass None or dummy if not needed for remote orchestration unless we use it.
+        # DeployFleet signature: (nix_port, remote_executor, session_port)
+        # We can pass None for session_port if not used, or a dummy.
+        # Let's fix use case to accept Optional or assume it.
+        # But for now let's pass None.
+        
+        use_case = DeployFleet(nix_adapter, fabric_adapter, None)
+        
+        targets = args.targets.split(",")
+        try:
+            print(f"[*] Deploying to fleet: {targets}...")
+            result = use_case.execute(args.config, args.script_cmd, args.session, targets)
+            if result:
+                print(f"[+] Deployment Successful to all nodes.")
+            else:
+                print(f"[-] Deployment Failed.")
+                sys.exit(1)
+        except Exception as e:
+             print(f"[-] Deployment Failed: {e}")
+             sys.exit(1)
 
     elif args.command == "attach":
         session_id = SessionId(args.session_id)
