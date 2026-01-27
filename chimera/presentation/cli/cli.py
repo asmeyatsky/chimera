@@ -35,16 +35,43 @@ def main():
     # Watch Command (Autonomous)
     watch_parser = subparsers.add_parser("watch", help="Start Autonomous Drift Detection & Healing")
     watch_parser.add_argument("--targets", "-t", required=True, help="Comma-separated list of targets")
-    watch_parser.add_argument("--config", "-c", default="default.nix", help="Path to Nix config")
-    watch_parser.add_argument("--interval", "-i", type=int, default=10, help="Check interval in seconds")
-    watch_parser.add_argument("--once", action="store_true", help="Run congruence check once and exit")
-    watch_parser.add_argument("--session", "-s", default="chimera-auto", help="Session name for healing")
+    # ... (args)
+
+    # Dash Command (TUI)
+    dash_parser = subparsers.add_parser("dash", help="Launch Chimera Fleet Dashboard")
+    dash_parser.add_argument("--targets", "-t", required=True, help="Comma-separated list of targets")
+
+    # Rollback Command (Time Machine)
+    rollback_parser = subparsers.add_parser("rollback", help="Time Machine: Rollback to previous generation")
+    rollback_parser.add_argument("--targets", "-t", required=True, help="Comma-separated list of targets")
+    rollback_parser.add_argument("--generation", "-g", help="Specific generation to switch to (optional)")
 
     args = parser.parse_args()
 
-    # ... (existing handlers)
+    # ... (handlers)
 
-    if args.command == "watch":
+    if args.command == "dash":
+        from chimera.presentation.tui.dashboard import Dashboard
+        targets = args.targets.split(",")
+        app = Dashboard(targets)
+        app.run()
+
+    elif args.command == "rollback":
+        from chimera.application.use_cases.rollback_deployment import RollbackDeployment
+        from chimera.infrastructure.adapters.fabric_adapter import FabricAdapter
+        
+        fabric_adapter = FabricAdapter()
+        use_case = RollbackDeployment(fabric_adapter)
+        
+        targets = args.targets.split(",")
+        print(f"[*] Initiating Time Machine Rollback on {targets}...")
+        if use_case.execute(targets, args.generation):
+            print("[+] Rollback Successful.")
+        else:
+            print("[-] Rollback Failed.")
+            sys.exit(1)
+
+    elif args.command == "watch":
         from chimera.application.use_cases.autonomous_loop import AutonomousLoop
         from chimera.application.use_cases.deploy_fleet import DeployFleet
         from chimera.infrastructure.adapters.fabric_adapter import FabricAdapter

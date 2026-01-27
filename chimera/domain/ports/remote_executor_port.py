@@ -31,3 +31,11 @@ class RemoteExecutorPort(ABC):
         Returns None if not found or error.
         """
         pass
+
+    @abstractmethod
+    def rollback(self, nodes: List[Node], generation: Optional[str] = None) -> bool:
+        """
+        Rolls back the deployment on a list of nodes.
+        If generation is None, rolls back one generation.
+        """
+        pass
