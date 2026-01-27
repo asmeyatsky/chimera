@@ -1,0 +1,1 @@
+services.web.script = "echo '🚀 Chimera Active on $HOST';"
