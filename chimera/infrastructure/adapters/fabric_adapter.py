@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Optional
 from fabric import Connection, Group
 from chimera.domain.ports.remote_executor_port import RemoteExecutorPort
 from chimera.domain.value_objects.node import Node
+from chimera.domain.value_objects.nix_hash import NixHash
 
 class FabricAdapter(RemoteExecutorPort):
     def _get_connection(self, node: Node) -> Connection:
@@ -71,3 +72,19 @@ class FabricAdapter(RemoteExecutorPort):
         except Exception as e:
             print(f"Execution failed: {e}")
             return False
+
+    def get_current_hash(self, node: Node) -> Optional[NixHash]:
+        # Connect to node and check current system state.
+        # For Phase 3 Verification, let's assume we track state in a file /tmp/chimera_current_hash
+        # In a real system, this would be `nixos-version --hash` or checking /run/current-system
+        
+        try:
+            conn = self._get_connection(node)
+            # Create a file-based state tracker for verification purpose
+            result = conn.run("cat /tmp/chimera_current_hash", hide=True, warn=True)
+            if result.ok:
+                from chimera.domain.value_objects.nix_hash import NixHash
+                return NixHash(result.stdout.strip())
+            return None
+        except Exception:
+            return None

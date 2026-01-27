@@ -32,9 +32,41 @@ def main():
     deploy_parser.add_argument("--session", "-s", default="chimera-deploy", help="Remote session name")
     deploy_parser.add_argument("script_cmd", help="Command to run remotely")
 
+    # Watch Command (Autonomous)
+    watch_parser = subparsers.add_parser("watch", help="Start Autonomous Drift Detection & Healing")
+    watch_parser.add_argument("--targets", "-t", required=True, help="Comma-separated list of targets")
+    watch_parser.add_argument("--config", "-c", default="default.nix", help="Path to Nix config")
+    watch_parser.add_argument("--interval", "-i", type=int, default=10, help="Check interval in seconds")
+    watch_parser.add_argument("--once", action="store_true", help="Run congruence check once and exit")
+    watch_parser.add_argument("--session", "-s", default="chimera-auto", help="Session name for healing")
+
     args = parser.parse_args()
 
-    if args.command == "run":
+    # ... (existing handlers)
+
+    if args.command == "watch":
+        from chimera.application.use_cases.autonomous_loop import AutonomousLoop
+        from chimera.application.use_cases.deploy_fleet import DeployFleet
+        from chimera.infrastructure.adapters.fabric_adapter import FabricAdapter
+        
+        nix_adapter = NixAdapter()
+        fabric_adapter = FabricAdapter()
+        
+        deploy_fleet = DeployFleet(nix_adapter, fabric_adapter, None)
+        autonomous_loop = AutonomousLoop(nix_adapter, fabric_adapter, deploy_fleet)
+        
+        targets = args.targets.split(",")
+        try:
+            print(f"[*] Starting Chimera Autonomous Watch on {targets}...")
+            autonomous_loop.execute(args.config, args.session, targets, args.interval, args.once)
+        except KeyboardInterrupt:
+            print("\n[*] Stopping Autonomous Loop.")
+            sys.exit(0)
+        except Exception as e:
+            print(f"[-] Autonomous Loop Failed: {e}")
+            sys.exit(1)
+
+    elif args.command == "run":
         nix_adapter = NixAdapter()
         tmux_adapter = TmuxAdapter()
         use_case = ExecuteLocalDeployment(nix_adapter, tmux_adapter)
@@ -55,11 +87,6 @@ def main():
         
         nix_adapter = NixAdapter()
         fabric_adapter = FabricAdapter()
-        # SessionPort for local? we pass None or dummy if not needed for remote orchestration unless we use it.
-        # DeployFleet signature: (nix_port, remote_executor, session_port)
-        # We can pass None for session_port if not used, or a dummy.
-        # Let's fix use case to accept Optional or assume it.
-        # But for now let's pass None.
         
         use_case = DeployFleet(nix_adapter, fabric_adapter, None)
         

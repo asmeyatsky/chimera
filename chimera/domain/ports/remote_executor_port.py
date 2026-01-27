@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 from chimera.domain.value_objects.node import Node
 from chimera.domain.value_objects.nix_hash import NixHash
 
@@ -21,5 +21,13 @@ class RemoteExecutorPort(ABC):
         """
         Executes a command on a list of nodes concurrently.
         Returns True if successful for all nodes.
+        """
+        pass
+
+    @abstractmethod
+    def get_current_hash(self, node: Node) -> Optional[NixHash]:
+        """
+        Retrieves the current Nix hash of the deployed system on a node.
+        Returns None if not found or error.
         """
         pass
