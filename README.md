@@ -5,8 +5,6 @@
 [![Stars](https://img.shields.io/github/stars/asmeyatsky/chimera?style=social)](https://github.com/asmeyatsky/chimera)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/asmeyatsky/chimera/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://github.com/asmeyatsky/chimera)
-[![Build Status](https://img.shields.io/github/actions/workflow/yourname/chimera?label=build)
-[![Codecov](https://img.shields.io/codecov/c/github/yourname/chimera?branch=main)](https://codecov.io/gh/yourname/chimera)
 
 ## 🔥 What is Chimera?
 
@@ -59,27 +57,21 @@ chimera watch -t "user@your-server.com"
 ### 🎮 Try the Viral Demo (30 seconds!)
 ```bash
 # Interactive demo showing autonomous healing
-curl -sSL https://raw.githubusercontent.com/asmeyatsky/chimera/main/demo/viral-demo.sh | bash
+python3 demo/viral-demo-simple.py
 
 # Or download and run locally
-wget https://raw.githubusercontent.com/asmeyatsky/chimera/main/demo/viral-demo.sh
-chmod +x viral-demo.sh
-./viral-demo.sh
+wget https://raw.githubusercontent.com/asmeyatsky/chimera/main/demo/viral-demo-simple.py
+python3 viral-demo-simple.py
 ```
 
 ### 🔥 Experience the Magic (Watch What Happens!)
 ```bash
 # The demo will show:
-# 1. Deploying to 3-node cluster
-# 2. Simulating configuration drift  
+# 1. Deploying to 5-node cluster
+# 2. Simulating critical memory leak  
 # 3. 🚨 Autonomous healing activated automatically
 # 4. ⏰ Time Machine rollback demonstration
 # 5. ✨ Infrastructure restored without any human intervention
-```
-
-### Try the Viral Demo
-```bash
-curl -sSL https://raw.githubusercontent.com/yourname/chimera/main/demo/viral-demo.sh | bash
 ```
 
 ---
@@ -88,7 +80,9 @@ curl -sSL https://raw.githubusercontent.com/yourname/chimera/main/demo/viral-dem
 
 **Watch Chimera heal itself in 30 seconds:**
 
-[![Demo GIF](https://github.com/asmeyatsky/chimera/raw/main/assets/demo.gif)]
+```bash
+python3 demo/viral-demo-simple.py
+```
 
 *Infrastructure that fixed itself while we slept - no human intervention required!*
 
@@ -287,9 +281,8 @@ chimera watch -t "user@server{1..1000}"
 ## 🤝 Community
 
 ### 🚀 Get Started
-- [Discord Server](https://discord.gg/chimera) - Chat with users and developers
 - [GitHub Discussions](https://github.com/asmeyatsky/chimera/discussions) - Questions and ideas
-- [Twitter/X](https://twitter.com/chimera_ops) - Latest updates and viral clips
+- [Twitter/X](https://x.com/chimera_ops) - Latest updates and viral clips
 
 ### 🌟 Contributing
 We love contributions! See [Contributing Guidelines](docs/contributing.md) for details.
@@ -304,7 +297,7 @@ pytest tests/
 ```
 
 ### 🏆 Champions Program
-Become a [Chimera Champion](docs/champions.md) and help shape the future of autonomous infrastructure!
+Become a Chimera Champion and help shape the future of autonomous infrastructure!
 
 ---
 
@@ -335,10 +328,10 @@ Become a [Chimera Champion](docs/champions.md) and help shape the future of auto
 
 ## 📊 Stats
 
-![GitHub stars](https://img.shields.io/github/stars/yourname/chimera?style=flat-square)
-![GitHub forks](https://img.shields.io/github/forks/yourname/chimera?style=flat-square)
-![GitHub issues](https://img.shields.io/github/issues/yourname/chimera?style=flat-square)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/yourname/chimera?style=flat-square)
+![GitHub stars](https://img.shields.io/github/stars/asmeyatsky/chimera?style=flat-square)
+![GitHub forks](https://img.shields.io/github/forks/asmeyatsky/chimera?style=flat-square)
+![GitHub issues](https://img.shields.io/github/issues/asmeyatsky/chimera?style=flat-square)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/asmeyatsky/chimera?style=flat-square)
 
 ---
 
@@ -372,7 +365,5 @@ If Chimera makes your life easier, please consider:
 <div align="center">
 
 **🔥 Deploy Once, Heal Forever with Chimera**
-
-[![Chimera Logo](https://github.com/yourname/chimera/raw/main/assets/logo.png)]
 
 </div>
