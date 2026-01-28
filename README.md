@@ -2,9 +2,11 @@
 
 > **Deploy to 1000+ nodes, let it heal itself forever. Never SSH into production again.**
 
-[![Stars](https://img.shields.io/github/stars/yourname/chimera?style=social)](https://github.com/yourname/chimera)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/yourname/chimera/blob/main/LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://github.com/yourname/chimera)
+[![Stars](https://img.shields.io/github/stars/asmeyatsky/chimera?style=social)](https://github.com/asmeyatsky/chimera)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/asmeyatsky/chimera/blob/main/LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://github.com/asmeyatsky/chimera)
+[![Build Status](https://img.shields.io/github/actions/workflow/yourname/chimera?label=build)
+[![Codecov](https://img.shields.io/codecov/c/github/yourname/chimera?branch=main)](https://codecov.io/gh/yourname/chimera)
 
 ## 🔥 What is Chimera?
 
@@ -34,7 +36,7 @@ chimera watch -t "user@server1,user@server2,user@server3"
 
 ## 🚀 Quick Start
 
-### Installation
+## 📋 Installation
 ```bash
 pip install chimera
 ```
@@ -44,14 +46,35 @@ pip install chimera
 # Create a simple Nix config
 echo "services.web.script = ''echo Hello Chimera!''; }" > demo.nix
 
-# Deploy locally
-chimera run -c demo.nix -s demo-session "echo '🔥 Chimera Active!'"
+# Deploy locally with persistent session
+chimera run -c demo.nix -s chimera-demo "echo '🔥 Chimera Active!'"
 
 # Deploy to fleet (replace with your servers)
 chimera deploy -t "user@your-server.com" -c demo.nix "echo '🚀 Production Ready!'"
 
 # Start autonomous monitoring
 chimera watch -t "user@your-server.com"
+```
+
+### 🎮 Try the Viral Demo (30 seconds!)
+```bash
+# Interactive demo showing autonomous healing
+curl -sSL https://raw.githubusercontent.com/asmeyatsky/chimera/main/demo/viral-demo.sh | bash
+
+# Or download and run locally
+wget https://raw.githubusercontent.com/asmeyatsky/chimera/main/demo/viral-demo.sh
+chmod +x viral-demo.sh
+./viral-demo.sh
+```
+
+### 🔥 Experience the Magic (Watch What Happens!)
+```bash
+# The demo will show:
+# 1. Deploying to 3-node cluster
+# 2. Simulating configuration drift  
+# 3. 🚨 Autonomous healing activated automatically
+# 4. ⏰ Time Machine rollback demonstration
+# 5. ✨ Infrastructure restored without any human intervention
 ```
 
 ### Try the Viral Demo
@@ -65,7 +88,7 @@ curl -sSL https://raw.githubusercontent.com/yourname/chimera/main/demo/viral-dem
 
 **Watch Chimera heal itself in 30 seconds:**
 
-[![Demo GIF](https://github.com/yourname/chimera/raw/main/assets/demo.gif)]
+[![Demo GIF](https://github.com/asmeyatsky/chimera/raw/main/assets/demo.gif)]
 
 *Infrastructure that fixed itself while we slept - no human intervention required!*
 
@@ -92,6 +115,90 @@ curl -sSL https://raw.githubusercontent.com/yourname/chimera/main/demo/viral-dem
 
 ## 🏗️ Architecture
 
+Chimera follows **Clean Architecture** with **Domain-Driven Design** principles, ensuring maintainable and extensible code:
+
+```
+┌─────────────────────────────────────────┐
+│             Presentation Layer                │
+│  CLI Interface & TUI Dashboard          │
+│  ┌─────────────────────────────────┤
+│             Application Layer                │
+│  Use Cases & Business Logic           │
+│  ┌─────────────────────────────────┤
+│               Domain Layer                   │
+│  Core Business Logic & Models         │
+│  ┌─────────────────────────────────┘
+│           Infrastructure Layer               │
+│  External Integrations (Fabric, Nix, Tmux)│
+└─────────────────────────────────────────┘
+```
+
+### 🔧 Core Components
+
+- **Autonomous Loop** (`chimera/application/use_cases/autonomous_loop.py`)
+  ```python
+  while True:
+      congruence_reports = self._check_congruence(nodes, expected_hash)
+      drifted_nodes = [report.node for report in congruence_reports if not report.is_congruent]
+      
+      if drifted_nodes:
+          print(f"[!] Drift detected on {len(drifted_nodes)} nodes! Initiating Self-Healing...")
+          self.deploy_fleet.execute(config_path, healing_command, session_name, drifted_targets)
+  ```
+  **Purpose:** Continuously monitors fleet and triggers healing when drift is detected
+
+- **Time Machine Rollback** (`chimera/application/use_cases/rollback_deployment.py`)
+  ```python
+  def rollback(self, nodes: List[Node], generation: Optional[str] = None) -> bool:
+      cmd = f"nix-env --switch-generation {generation}" if generation else "nix-env --rollback"
+  ```
+  **Purpose:** Instant rollback to any previous system generation using NixOS capabilities
+
+- **Fleet Manager** (`chimera/application/use_cases/deploy_fleet.py`)
+  ```python
+  def execute(self, config_path: str, command: str, session_name: str, targets: List[str]) -> bool:
+      nix_hash = self.nix_port.build(str(config.path))
+      if not self.remote_executor.sync_closure(nodes, str(nix_hash)): return False
+      if not self.remote_executor.exec_command(nodes, session_cmd): return False
+  ```
+  **Purpose:** Orchestrates deployment across multiple nodes with automatic coordination
+
+- **Real-Time Dashboard** (`chimera/presentation/tui/dashboard.py`)
+  ```python
+  async def update_fleet_status(self):
+      for node in self.targets:
+          h = await loop.run_in_executor(None, self.adapter.get_current_hash, node)
+          status = "Online" if h else "Unreachable"
+          # Update dashboard with real-time fleet status
+  ```
+  **Purpose:** Visual monitoring of fleet health and congruence status
+
+### 🧛 Domain-Driven Design
+
+#### **Domain Layer** (Pure Business Logic)
+- **Entities**: `Deployment`, `Node`, `NixConfig` - Core business objects
+- **Value Objects**: `NixHash`, `SessionId`, `CongruenceReport` - Immutable concepts
+- **Domain Services**: `AutonomousLoop`, `DeployFleet` - Business use case orchestration
+
+#### **Application Layer** (Use Case Coordination)
+- **Use Cases**: `ExecuteLocalDeployment`, `RollbackDeployment` - Application workflows
+- **DTOs**: Data transfer objects between layers
+- **Application Services**: Higher-level business operations
+
+#### **Infrastructure Layer** (External Systems)
+- **Adapters**: `FabricAdapter`, `NixAdapter`, `TmuxAdapter` - External system integrations
+- **Repositories**: Data access and state persistence
+- **Configuration**: System configuration and dependency injection
+
+### 🎯 Design Patterns
+
+- **Ports & Adapters**: Abstract interfaces enable easy testing and new integrations
+- **Dependency Injection**: Loose coupling between layers
+- **Immutable Models**: Domain objects that ensure state consistency
+- **Event-Driven Architecture**: Decoupled components for extensibility
+
+---
+
 Chimera follows **Clean Architecture** with **Domain-Driven Design** principles:
 
 ```
@@ -108,10 +215,10 @@ Chimera follows **Clean Architecture** with **Domain-Driven Design** principles:
 
 ### 🔧 Core Components
 
-- **Autonomous Loop** - Drift detection and self-healing (`chimera/autonomous_loop.py`)
-- **Time Machine** - Generation-based rollback system (`chimera/rollback_deployment.py`)  
-- **Fleet Manager** - Multi-node orchestration (`chimera/deploy_fleet.py`)
-- **Real-Time Dashboard** - Visual fleet monitoring (`chimera/dashboard.py`)
+- **Autonomous Loop** - Drift detection and self-healing (`chimera/application/use_cases/autonomous_loop.py`)
+  - **Time Machine** - Generation-based rollback system (`chimera/application/use_cases/rollback_deployment.py`)  
+- **Fleet Manager** - Multi-node orchestration (`chimera/application/use_cases/deploy_fleet.py`)
+- **Real-Time Dashboard** - Visual fleet monitoring (`chimera/presentation/tui/dashboard.py`)
 
 ---
 
@@ -120,15 +227,15 @@ Chimera follows **Clean Architecture** with **Domain-Driven Design** principles:
 ### 📚 User Guides
 - [Getting Started Guide](docs/getting-started.md)
 - [Fleet Management](docs/fleet-management.md)
-- [Autonomous Healing](docs/autonomous-healing.md)
-- [Time Machine Rollbacks](docs/time-machine.md)
-- [Dashboard Usage](docs/dashboard.md)
+- [Autonomous Healing Guide](docs/autonomous-healing.md) - 📋 Learn how drift detection and self-repair work
+- [Time Machine Rollbacks](docs/time-machine.md) - ⏰️ Instant recovery to any generation
+- [Dashboard Usage](docs/dashboard.md) - 📊 Real-time fleet monitoring
 
 ### 🔧 Developer Guide
-- [Architecture Overview](docs/architecture.md)
-- [Contributing Guidelines](docs/contributing.md)
-- [API Reference](docs/api.md)
-- [Plugin Development](docs/plugins.md)
+- [Architecture Overview](docs/architecture.md) - 🏗️ Clean DDD implementation
+- [Contributing Guidelines](docs/contributing.md) - 🤝 Join our community
+- [API Reference](docs/api.md) - 🔌 Integrate with your tools
+- [Plugin Development](docs/plugins.md) - 🔌 Extend Chimera capabilities
 
 ---
 
@@ -142,6 +249,11 @@ ssh user@server2
 ssh user@server3
 # ... repeat 1000 times
 # Hope nothing breaks at 3AM
+
+# PagerDuty calls at 2AM...
+# Configuration drift across cluster...
+# Manual rollbacks take hours...
+# Coffee addiction intensifies... 😫
 ```
 
 ### ✅ The Chimera Way
@@ -150,15 +262,25 @@ ssh user@server3
 chimera deploy -t "user@server{1..1000}" -c production.nix
 chimera watch -t "user@server{1..1000}"
 # 🛌 Sleep peacefully, infrastructure handles itself
+
+# Result:
+# ✅ 3AM: Configuration drift detected on server12
+# 🚀 Autonomous healing initiated at 3:02AM
+# ✅ 3:03AM: All systems restored automatically
+# 🎯 Your PagerDuty app stays silent all night
+# 🏖️ You arrive to perfectly healthy infrastructure
+# 💰 No coffee required (okay, maybe some) ☕
 ```
 
 ### 🎯 Unique Advantages
 
-1. **First Autonomous Healing** - Industry-first self-repair infrastructure
-2. **Mathematical Guarantees** - Congruence-based verification system
-3. **Time Machine Rollbacks** - Instant recovery to any generation
-4. **Zero-Downtime Operations** - Never break production again
-5. **Clean Architecture** - Maintainable and extensible codebase
+1. **🔥 First Autonomous Healing** - Industry-first infrastructure that detects and fixes drift automatically
+2. **⏰️ Time Machine Rollbacks** - Instant recovery to ANY previous generation - revolutionary rollback concept
+3. **📊 Real-Time Fleet Monitoring** - Beautiful Textual dashboard showing live system state
+4. **🎯 Deterministic Guarantees** - Math-based convergence verification across all nodes
+5. **🏗️ Clean DDD Architecture** - Maintainable codebase following Clean Architecture principles
+6. **🧛 Zero-Downtime Operations** - Infrastructure that heals itself 24/7
+7. **⚀ Autonomous Intelligence** - Systems that think before they act, preventing issues proactively
 
 ---
 
@@ -166,8 +288,8 @@ chimera watch -t "user@server{1..1000}"
 
 ### 🚀 Get Started
 - [Discord Server](https://discord.gg/chimera) - Chat with users and developers
-- [GitHub Discussions](https://github.com/yourname/chimera/discussions) - Questions and ideas
-- [Twitter/X](https://twitter.com/chimera_ops) - Latest updates and tips
+- [GitHub Discussions](https://github.com/asmeyatsky/chimera/discussions) - Questions and ideas
+- [Twitter/X](https://twitter.com/chimera_ops) - Latest updates and viral clips
 
 ### 🌟 Contributing
 We love contributions! See [Contributing Guidelines](docs/contributing.md) for details.
