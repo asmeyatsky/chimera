@@ -1,369 +1,177 @@
-# 🚀 Chimera: Autonomous Infrastructure Engine
+# Chimera: Autonomous Determinism Engine
 
-> **Deploy to 1000+ nodes, let it heal itself forever. Never SSH into production again.**
+> Deploy to 1000+ nodes, let it heal itself forever. Never SSH into production again.
 
-[![Stars](https://img.shields.io/github/stars/asmeyatsky/chimera?style=social)](https://github.com/asmeyatsky/chimera)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/asmeyatsky/chimera/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://github.com/asmeyatsky/chimera)
+[![Tests](https://img.shields.io/badge/tests-541%20passing-brightgreen.svg)](https://github.com/asmeyatsky/chimera)
+[![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen.svg)](https://github.com/asmeyatsky/chimera)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/asmeyatsky/chimera/blob/main/LICENSE)
 
-## 🔥 What is Chimera?
+## What is Chimera?
 
-**Chimera** is the world's first **autonomous deployment engine** that combines Nix reproducibility with self-healing capabilities and revolutionary "Time Machine" rollback functionality.
+Chimera is an autonomous deployment engine that combines Nix reproducibility with self-healing capabilities. It guarantees every node in a fleet converges to the same configuration state, detects when they drift, and heals them automatically.
 
-### 🎯 The Magic
 ```bash
 # Deploy to fleet
-chimera deploy -t "user@server1,user@server2,user@server3" -c production.nix
+chimera deploy -t "user@server1,user@server2,user@server3" -c production.nix "nixos-rebuild switch"
 
-# Start autonomous monitoring
+# Start autonomous monitoring — infrastructure heals itself while you sleep
 chimera watch -t "user@server1,user@server2,user@server3"
-
-# ✨ Infrastructure fixes itself while you sleep!
 ```
 
-### 🛡️ Core Features
+## Features
 
-- **🔥 Autonomous Self-Healing** - Detects drift and fixes automatically
-- **⏰ Time Machine Rollback** - Instantly rollback to ANY previous generation  
-- **📊 Real-Time Fleet Dashboard** - Beautiful TUI monitoring interface
-- **🎯 Deterministic Deployments** - Math-based convergence guarantees
-- **🧛 Zero-Downtime Operations** - Never break production again
-- **🏗️ Clean Architecture** - Following DDD and hexagonal patterns
+**Deterministic Deployments** — Nix closures synced to remote nodes via SSH, executed in persistent Tmux sessions. DAG orchestrator ensures correct build/sync/execute ordering.
+
+**Autonomous Drift Detection** — Continuous monitoring compares expected vs actual Nix store hashes. Severity classification (LOW/MEDIUM/HIGH/CRITICAL) with blast radius calculation across the fleet.
+
+**Self-Healing** — Automatic remediation based on severity: restart services, rebuild configurations, or rollback to previous NixOS generations. Policy engine with RBAC controls healing authorization.
+
+**Time Machine Rollback** — Instant rollback to any previous NixOS generation across the entire fleet.
+
+**Fleet Orchestration** — Deploy, rollback, and monitor multiple nodes in parallel. Agent registry tracks per-node health and drift status.
+
+**Predictive Analytics** — Risk scoring per node using drift frequency, severity trends, and MTTR tracking. Trend detection flags nodes before they fail.
+
+**Root Cause Analysis** — Causal AI correlating temporal, spatial, and deployment signals to identify why drift occurred.
+
+**Remediation Playbooks** — Validated, marketplace-style playbooks with step-by-step healing procedures and rollback on failure.
+
+**MCP Integration** — Model Context Protocol server exposing deployment capabilities to AI agents via stdio JSON-RPC transport.
+
+**Multi-Cloud Support** — AWS, GCP, and Azure adapters for node discovery, provisioning, and auto-scaling integration.
+
+**Notifications** — Slack webhooks, PagerDuty, and email alerts for drift events and healing actions.
+
+**SLO/SLA Tracking** — Error budget monitoring with violation detection and window-based availability calculations.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-## 📋 Installation
-```bash
-pip install chimera
-```
+### Prerequisites
 
-### 5-Minute Demo
-```bash
-# Create a simple Nix config
-echo "services.web.script = ''echo Hello Chimera!''; }" > demo.nix
+- Python 3.11+
+- Nix package manager
+- tmux
 
-# Deploy locally with persistent session
-chimera run -c demo.nix -s chimera-demo "echo '🔥 Chimera Active!'"
-
-# Deploy to fleet (replace with your servers)
-chimera deploy -t "user@your-server.com" -c demo.nix "echo '🚀 Production Ready!'"
-
-# Start autonomous monitoring
-chimera watch -t "user@your-server.com"
-```
-
-### 🎮 Try the Viral Demo (30 seconds!)
-```bash
-# Interactive demo showing autonomous healing
-python3 demo/viral-demo-simple.py
-
-# Or download and run locally
-wget https://raw.githubusercontent.com/asmeyatsky/chimera/main/demo/viral-demo-simple.py
-python3 viral-demo-simple.py
-```
-
-### 🔥 Experience the Magic (Watch What Happens!)
-```bash
-# The demo will show:
-# 1. Deploying to 5-node cluster
-# 2. Simulating critical memory leak  
-# 3. 🚨 Autonomous healing activated automatically
-# 4. ⏰ Time Machine rollback demonstration
-# 5. ✨ Infrastructure restored without any human intervention
-```
-
----
-
-## 🎬 Live Demo
-
-**Watch Chimera heal itself in 30 seconds:**
+### Install
 
 ```bash
-python3 demo/viral-demo-simple.py
+pip install .
+
+# With optional dependencies
+pip install ".[ssh]"    # SSH/remote execution (Fabric)
+pip install ".[tui]"    # TUI dashboard (Textual)
+pip install ".[all]"    # Everything
+pip install ".[dev]"    # Development (pytest, ruff)
 ```
 
-*Infrastructure that fixed itself while we slept - no human intervention required!*
+### Basic Usage
 
----
-
-## 💡 Use Cases
-
-### 🏢 Production Fleets
-- Deploy configurations to 1000+ nodes
-- Autonomous monitoring and healing 24/7
-- Zero-downtime rollbacks
-
-### 🧪 Development Environments  
-- Consistent development setups
-- Automatic drift correction
-- Time-travel debugging
-
-### 🏭️ Compliance & Auditing
-- Generation-based rollbacks for compliance
-- Automatic convergence verification
-- Audit trail of all changes
-
----
-
-## 🏗️ Architecture
-
-Chimera follows **Clean Architecture** with **Domain-Driven Design** principles, ensuring maintainable and extensible code:
-
-```
-┌─────────────────────────────────────────┐
-│             Presentation Layer                │
-│  CLI Interface & TUI Dashboard          │
-│  ┌─────────────────────────────────┤
-│             Application Layer                │
-│  Use Cases & Business Logic           │
-│  ┌─────────────────────────────────┤
-│               Domain Layer                   │
-│  Core Business Logic & Models         │
-│  ┌─────────────────────────────────┘
-│           Infrastructure Layer               │
-│  External Integrations (Fabric, Nix, Tmux)│
-└─────────────────────────────────────────┘
-```
-
-### 🔧 Core Components
-
-- **Autonomous Loop** (`chimera/application/use_cases/autonomous_loop.py`)
-  ```python
-  while True:
-      congruence_reports = self._check_congruence(nodes, expected_hash)
-      drifted_nodes = [report.node for report in congruence_reports if not report.is_congruent]
-      
-      if drifted_nodes:
-          print(f"[!] Drift detected on {len(drifted_nodes)} nodes! Initiating Self-Healing...")
-          self.deploy_fleet.execute(config_path, healing_command, session_name, drifted_targets)
-  ```
-  **Purpose:** Continuously monitors fleet and triggers healing when drift is detected
-
-- **Time Machine Rollback** (`chimera/application/use_cases/rollback_deployment.py`)
-  ```python
-  def rollback(self, nodes: List[Node], generation: Optional[str] = None) -> bool:
-      cmd = f"nix-env --switch-generation {generation}" if generation else "nix-env --rollback"
-  ```
-  **Purpose:** Instant rollback to any previous system generation using NixOS capabilities
-
-- **Fleet Manager** (`chimera/application/use_cases/deploy_fleet.py`)
-  ```python
-  def execute(self, config_path: str, command: str, session_name: str, targets: List[str]) -> bool:
-      nix_hash = self.nix_port.build(str(config.path))
-      if not self.remote_executor.sync_closure(nodes, str(nix_hash)): return False
-      if not self.remote_executor.exec_command(nodes, session_cmd): return False
-  ```
-  **Purpose:** Orchestrates deployment across multiple nodes with automatic coordination
-
-- **Real-Time Dashboard** (`chimera/presentation/tui/dashboard.py`)
-  ```python
-  async def update_fleet_status(self):
-      for node in self.targets:
-          h = await loop.run_in_executor(None, self.adapter.get_current_hash, node)
-          status = "Online" if h else "Unreachable"
-          # Update dashboard with real-time fleet status
-  ```
-  **Purpose:** Visual monitoring of fleet health and congruence status
-
-### 🧛 Domain-Driven Design
-
-#### **Domain Layer** (Pure Business Logic)
-- **Entities**: `Deployment`, `Node`, `NixConfig` - Core business objects
-- **Value Objects**: `NixHash`, `SessionId`, `CongruenceReport` - Immutable concepts
-- **Domain Services**: `AutonomousLoop`, `DeployFleet` - Business use case orchestration
-
-#### **Application Layer** (Use Case Coordination)
-- **Use Cases**: `ExecuteLocalDeployment`, `RollbackDeployment` - Application workflows
-- **DTOs**: Data transfer objects between layers
-- **Application Services**: Higher-level business operations
-
-#### **Infrastructure Layer** (External Systems)
-- **Adapters**: `FabricAdapter`, `NixAdapter`, `TmuxAdapter` - External system integrations
-- **Repositories**: Data access and state persistence
-- **Configuration**: System configuration and dependency injection
-
-### 🎯 Design Patterns
-
-- **Ports & Adapters**: Abstract interfaces enable easy testing and new integrations
-- **Dependency Injection**: Loose coupling between layers
-- **Immutable Models**: Domain objects that ensure state consistency
-- **Event-Driven Architecture**: Decoupled components for extensibility
-
----
-
-Chimera follows **Clean Architecture** with **Domain-Driven Design** principles:
-
-```
-┌─────────────────────────────────────────────────┐
-│             Presentation Layer                │
-├─────────────────────────────────────────────────┤
-│             Application Layer                │
-├─────────────────────────────────────────────────┤
-│               Domain Layer                   │
-├─────────────────────────────────────────────────┤
-│           Infrastructure Layer               │
-└─────────────────────────────────────────────────┘
-```
-
-### 🔧 Core Components
-
-- **Autonomous Loop** - Drift detection and self-healing (`chimera/application/use_cases/autonomous_loop.py`)
-  - **Time Machine** - Generation-based rollback system (`chimera/application/use_cases/rollback_deployment.py`)  
-- **Fleet Manager** - Multi-node orchestration (`chimera/application/use_cases/deploy_fleet.py`)
-- **Real-Time Dashboard** - Visual fleet monitoring (`chimera/presentation/tui/dashboard.py`)
-
----
-
-## 📖 Documentation
-
-### 📚 User Guides
-- [Getting Started Guide](docs/getting-started.md)
-- [Fleet Management](docs/fleet-management.md)
-- [Autonomous Healing Guide](docs/autonomous-healing.md) - 📋 Learn how drift detection and self-repair work
-- [Time Machine Rollbacks](docs/time-machine.md) - ⏰️ Instant recovery to any generation
-- [Dashboard Usage](docs/dashboard.md) - 📊 Real-time fleet monitoring
-
-### 🔧 Developer Guide
-- [Architecture Overview](docs/architecture.md) - 🏗️ Clean DDD implementation
-- [Contributing Guidelines](docs/contributing.md) - 🤝 Join our community
-- [API Reference](docs/api.md) - 🔌 Integrate with your tools
-- [Plugin Development](docs/plugins.md) - 🔌 Extend Chimera capabilities
-
----
-
-## 🌟 Why Chimera?
-
-### ❌ The Old Way
 ```bash
-# Manual deployment nightmare 😱
-ssh user@server1
-ssh user@server2  
-ssh user@server3
-# ... repeat 1000 times
-# Hope nothing breaks at 3AM
+# Run locally in a Nix+Tmux environment
+chimera run -c default.nix "echo hello"
 
-# PagerDuty calls at 2AM...
-# Configuration drift across cluster...
-# Manual rollbacks take hours...
-# Coffee addiction intensifies... 😫
+# Deploy to fleet
+chimera deploy -t "root@10.0.0.1:22,root@10.0.0.2:22" -c production.nix "nixos-rebuild switch"
+
+# Rollback fleet to previous generation
+chimera rollback -t "root@10.0.0.1:22,root@10.0.0.2:22"
+
+# Autonomous drift watch with self-healing
+chimera watch -t "root@10.0.0.1:22,root@10.0.0.2:22" --interval 30
+
+# Web dashboard
+chimera web --port 8080
+
+# Node agent daemon
+chimera agent --node-id node-01
+
+# MCP server for AI agents
+chimera mcp
 ```
 
-### ✅ The Chimera Way
+### Configuration
+
+Create `chimera.json` in your working directory:
+
+```json
+{
+  "log_level": "INFO",
+  "fleet": {
+    "targets": ["root@10.0.0.1:22", "root@10.0.0.2:22"]
+  },
+  "watch": {
+    "interval_seconds": 30
+  },
+  "web": {
+    "host": "127.0.0.1",
+    "port": 8080
+  },
+  "notifications": {
+    "slack_webhook_url": "https://hooks.slack.com/services/..."
+  }
+}
+```
+
+Environment variables override file config with the pattern `CHIMERA_SECTION_KEY`:
+
 ```bash
-# Autonomous magic ✨
-chimera deploy -t "user@server{1..1000}" -c production.nix
-chimera watch -t "user@server{1..1000}"
-# 🛌 Sleep peacefully, infrastructure handles itself
-
-# Result:
-# ✅ 3AM: Configuration drift detected on server12
-# 🚀 Autonomous healing initiated at 3:02AM
-# ✅ 3:03AM: All systems restored automatically
-# 🎯 Your PagerDuty app stays silent all night
-# 🏖️ You arrive to perfectly healthy infrastructure
-# 💰 No coffee required (okay, maybe some) ☕
+export CHIMERA_WEB_PORT=9090
+export CHIMERA_FLEET_TARGETS="node1,node2,node3"
 ```
-
-### 🎯 Unique Advantages
-
-1. **🔥 First Autonomous Healing** - Industry-first infrastructure that detects and fixes drift automatically
-2. **⏰️ Time Machine Rollbacks** - Instant recovery to ANY previous generation - revolutionary rollback concept
-3. **📊 Real-Time Fleet Monitoring** - Beautiful Textual dashboard showing live system state
-4. **🎯 Deterministic Guarantees** - Math-based convergence verification across all nodes
-5. **🏗️ Clean DDD Architecture** - Maintainable codebase following Clean Architecture principles
-6. **🧛 Zero-Downtime Operations** - Infrastructure that heals itself 24/7
-7. **⚀ Autonomous Intelligence** - Systems that think before they act, preventing issues proactively
 
 ---
 
-## 🤝 Community
+## Architecture
 
-### 🚀 Get Started
-- [GitHub Discussions](https://github.com/asmeyatsky/chimera/discussions) - Questions and ideas
-- [Twitter/X](https://x.com/chimera_ops) - Latest updates and viral clips
+Chimera follows hexagonal architecture (ports and adapters) with domain-driven design:
 
-### 🌟 Contributing
-We love contributions! See [Contributing Guidelines](docs/contributing.md) for details.
+```
+Presentation    CLI · TUI Dashboard · Web Dashboard · MCP Server
+Application     DeployFleet · ExecuteLocal · Rollback · AutonomousLoop
+Domain          Deployment · SLO · Playbook · Policy · DriftDetection · RCA
+Infrastructure  Nix · Tmux · Fabric/SSH · SQLite · EventBus · OTEL
+```
 
-**Quick Start:**
+- **8 Protocol-based ports** — Nix, Session, RemoteExecutor, CloudProvider, EventBus, Orchestrator, ITSM, Notification
+- **Composition root** — Single `create_container()` factory wires all dependencies
+- **Frozen dataclasses** — Immutable entities, state transitions return new instances
+- **Domain events** — Event bus publishes deployment lifecycle events
+- **Zero runtime dependencies** — Core uses only Python stdlib (sqlite3, asyncio, json, subprocess)
+
+---
+
+## Documentation
+
+- [Getting Started](docs/getting-started.md) — Installation, configuration, basic usage
+- [Architecture Guide](docs/architecture.md) — Design patterns, layer diagram, module structure
+- [API Reference](docs/api-reference.md) — CLI commands, MCP tools, config options, domain ports
+- [Cloud Providers](docs/cloud-providers.md) — AWS, GCP, Azure setup and node discovery
+
+---
+
+## Development
+
 ```bash
-# Fork, clone, and set up development environment
-git clone https://github.com/your-username/chimera.git
-cd chimera
-pip install -e ".[dev]"
-pytest tests/
+# Install dev dependencies
+pip install ".[dev]"
+
+# Run tests
+pytest
+
+# Run with coverage
+pytest --cov=chimera
+
+# Lint
+ruff check chimera/
 ```
 
-### 🏆 Champions Program
-Become a Chimera Champion and help shape the future of autonomous infrastructure!
+541 tests, 86% coverage, CI via GitHub Actions.
 
 ---
 
-## 📈 Roadmap
+## License
 
-### ✅ v1.0 (Current)
-- [x] Autonomous healing loop
-- [x] Time machine rollbacks  
-- [x] Real-time dashboard
-- [x] Fleet deployment
-- [x] Nix + Fabric integration
-
-### 🚧 v1.1 (Next)
-- [ ] Kubernetes adapter
-- [ ] Slack/Discord notifications
-- [ ] Advanced healing patterns
-- [ ] Metrics and analytics
-- [ ] Plugin ecosystem
-
-### 🎯 v2.0 (Future)
-- [ ] Machine learning predictions
-- [ ] Multi-cloud support
-- [ ] Enterprise compliance features
-- [ ] Advanced analytics dashboard
-- [ ] API for integration
-
----
-
-## 📊 Stats
-
-![GitHub stars](https://img.shields.io/github/stars/asmeyatsky/chimera?style=flat-square)
-![GitHub forks](https://img.shields.io/github/forks/asmeyatsky/chimera?style=flat-square)
-![GitHub issues](https://img.shields.io/github/issues/asmeyatsky/chimera?style=flat-square)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/asmeyatsky/chimera?style=flat-square)
-
----
-
-## 📄 License
-
-Chimera is licensed under the [MIT License](LICENSE).
-
----
-
-## 🙏 Acknowledgments
-
-- **Nix Team** - For reproducible packaging innovation
-- **Fabric Team** - For remote execution capabilities  
-- **Tmux Team** - For persistent session management
-- **Clean Architecture Community** - For architectural guidance
-
----
-
-## 🎪 Show Your Support
-
-If Chimera makes your life easier, please consider:
-
-- ⭐ Starring the repository
-- 🐦 Reporting bugs and suggesting features
-- 💬 Sharing with your colleagues
-- 📢 Writing about your experience
-- 🤝 Contributing code or documentation
-
----
-
-<div align="center">
-
-**🔥 Deploy Once, Heal Forever with Chimera**
-
-</div>
+MIT License. See [LICENSE](LICENSE).
