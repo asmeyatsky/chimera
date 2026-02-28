@@ -49,5 +49,5 @@ class ExecuteLocalDeployment:
             return session_id
 
         except Exception as e:
-            deployment.fail(str(e))
+            deployment = deployment.fail(str(e))
             raise e

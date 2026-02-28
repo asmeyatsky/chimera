@@ -8,14 +8,17 @@ Architectural Intent:
 """
 
 import asyncio
+import logging
 import subprocess
 import os
 import shlex
 from chimera.domain.ports.nix_port import NixPort
 from chimera.domain.value_objects.nix_hash import NixHash
 
+logger = logging.getLogger(__name__)
 
-class NixAdapter(NixPort):
+
+class NixAdapter:
     async def build(self, path: str) -> NixHash:
         def _build():
             try:
@@ -30,7 +33,7 @@ class NixAdapter(NixPort):
                 hash_part = basename.split("-")[0]
                 return NixHash(hash_part)
             except FileNotFoundError:
-                print("[-] 'nix-build' not found. Using simulation mode.")
+                logger.warning("'nix-build' not found. Using simulation mode.")
                 return NixHash("00000000000000000000000000000000")
             except subprocess.CalledProcessError as e:
                 raise Exception(f"Nix build failed: {e.stderr}")

@@ -3,12 +3,15 @@ Event Bus Infrastructure
 
 Architectural Intent:
 - In-memory event bus implementation for publishing domain events
-- Supports synchronous subscription handlers
+- Supports async subscription handlers
 - Can be extended to use message queues or MCP-based event bus
 """
 
+import logging
 from typing import Callable, Awaitable
-from chimera.domain.entities.deployment import DomainEvent
+from chimera.domain.events.event_base import DomainEvent
+
+logger = logging.getLogger(__name__)
 
 
 class EventBus:

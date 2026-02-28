@@ -7,8 +7,9 @@ Architectural Intent:
 - Uses parallel node health checks
 """
 
+import asyncio
+import logging
 from typing import List
-import time
 from pathlib import Path
 from chimera.domain.entities.nix_config import NixConfig
 from chimera.domain.value_objects.node import Node
@@ -17,6 +18,8 @@ from chimera.domain.value_objects.nix_hash import NixHash
 from chimera.domain.ports.nix_port import NixPort
 from chimera.domain.ports.remote_executor_port import RemoteExecutorPort
 from chimera.application.use_cases.deploy_fleet import DeployFleet
+
+logger = logging.getLogger(__name__)
 
 
 class AutonomousLoop:
@@ -43,9 +46,9 @@ class AutonomousLoop:
 
         try:
             expected_hash = await self.nix_port.build(str(config.path))
-            print(f"[*] Expected System Hash: {expected_hash}")
+            logger.info("Expected System Hash: %s", expected_hash)
         except Exception as e:
-            print(f"[-] Failed to resolve expected state: {e}")
+            logger.error("Failed to resolve expected state: %s", e)
             return
 
         while True:
@@ -56,8 +59,9 @@ class AutonomousLoop:
             ]
 
             if drifted_nodes:
-                print(
-                    f"[!] Drift detected on {len(drifted_nodes)} nodes! Initiating Self-Healing..."
+                logger.warning(
+                    "Drift detected on %d nodes! Initiating Self-Healing...",
+                    len(drifted_nodes),
                 )
                 drifted_targets = [str(n) for n in drifted_nodes]
 
@@ -68,12 +72,12 @@ class AutonomousLoop:
                     drifted_targets,
                 )
             else:
-                print(f"[+] All {len(nodes)} nodes are congruent.")
+                logger.info("All %d nodes are congruent.", len(nodes))
 
             if run_once:
                 break
 
-            time.sleep(interval_seconds)
+            await asyncio.sleep(interval_seconds)
 
     async def _check_congruence(
         self, nodes: List[Node], expected_hash: NixHash

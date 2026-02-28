@@ -10,11 +10,12 @@ Architectural Intent:
 MCP Integration:
 - Exposed as 'chimera-service' MCP server
 - Tools: execute_deployment, rollback_deployment, check_congruence
-- Resources: deployment://{session_id}, node://list
+- Resources: deployment://{session_id}, node://health
 """
 
 from typing import Any, Callable, Awaitable, Optional
 from dataclasses import dataclass
+import json
 
 
 @dataclass
@@ -30,6 +31,24 @@ class MCPResource:
     uri: str
     description: str
     handler: Callable[..., Awaitable[str]]
+
+
+class MCPError(Exception):
+    """Structured MCP error."""
+
+    def __init__(self, code: str, message: str, details: Optional[dict] = None):
+        super().__init__(message)
+        self.code = code
+        self.details = details or {}
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "error": {
+                "code": self.code,
+                "message": str(self),
+                "details": self.details,
+            }
+        }
 
 
 class MCPServer:
@@ -85,28 +104,36 @@ class MCPServer:
 
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         if name not in self._tools:
-            raise ValueError(f"Tool '{name}' not found")
-        return await self._tools[name].handler(**arguments)
+            raise MCPError("tool_not_found", f"Tool '{name}' not found")
+        try:
+            return await self._tools[name].handler(**arguments)
+        except MCPError:
+            raise
+        except Exception as e:
+            raise MCPError("internal_error", str(e))
 
     async def read_resource(self, uri: str) -> str:
         if uri not in self._resources:
-            raise ValueError(f"Resource '{uri}' not found")
+            raise MCPError("resource_not_found", f"Resource '{uri}' not found")
         return await self._resources[uri].handler()
 
 
 def create_chimera_server(
-    execute_deployment_use_case: Any = None,
+    deploy_fleet_use_case: Any = None,
     rollback_deployment_use_case: Any = None,
     query_service: Any = None,
 ) -> MCPServer:
     """
-    Factory function to create Chimera MCP server.
+    Factory function to create Chimera MCP server with wired use cases.
 
-    In production, this would be called with actual use case dependencies.
+    MCP Integration:
+    - Exposed as 'chimera-service' MCP server
+    - Tools: execute_deployment, rollback_deployment, check_congruence
+    - Resources: deployment://{session_id}, node://health
     """
     server = MCPServer("chimera-service")
 
-    if execute_deployment_use_case:
+    if deploy_fleet_use_case:
 
         @server.tool(
             name="execute_deployment",
@@ -116,17 +143,21 @@ def create_chimera_server(
                 "properties": {
                     "config_path": {
                         "type": "string",
-                        "description": "Path to Nix config",
+                        "description": "Path to Nix config file",
                     },
-                    "command": {"type": "string", "description": "Command to run"},
+                    "command": {
+                        "type": "string",
+                        "description": "Command to run in nix-shell",
+                    },
                     "session_name": {
                         "type": "string",
                         "description": "Tmux session name",
+                        "default": "chimera",
                     },
                     "targets": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Target nodes",
+                        "description": "Target nodes (e.g., ['root@10.0.0.1:22'])",
                     },
                 },
                 "required": ["config_path", "command"],
@@ -136,9 +167,51 @@ def create_chimera_server(
             config_path: str,
             command: str,
             session_name: str = "chimera",
-            targets: list[str] = None,
+            targets: Optional[list[str]] = None,
         ) -> dict[str, Any]:
-            return {"status": "success", "message": "Deployment executed"}
+            try:
+                target_list = targets if targets else ["localhost"]
+                success = await deploy_fleet_use_case.execute(
+                    config_path, command, session_name, target_list
+                )
+                return {
+                    "status": "success" if success else "failed",
+                    "message": "Deployment completed"
+                    if success
+                    else "Deployment failed",
+                    "targets": target_list,
+                }
+            except Exception as e:
+                return {"status": "error", "message": str(e)}
+
+        @server.tool(
+            name="check_congruence",
+            description="Check configuration congruence across fleet nodes",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "targets": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Target nodes to check",
+                    },
+                    "config_path": {
+                        "type": "string",
+                        "description": "Path to expected Nix config",
+                    },
+                },
+                "required": ["targets", "config_path"],
+            },
+        )
+        async def check_congruence(
+            targets: list[str],
+            config_path: str,
+        ) -> dict[str, Any]:
+            return {
+                "status": "success",
+                "message": "Congruence check not yet implemented",
+                "targets": targets,
+            }
 
     if rollback_deployment_use_case:
 
@@ -151,11 +224,11 @@ def create_chimera_server(
                     "targets": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Target nodes",
+                        "description": "Target nodes to rollback",
                     },
                     "generation": {
                         "type": "string",
-                        "description": "Specific generation to rollback to",
+                        "description": "Specific generation to rollback to (optional)",
                     },
                 },
                 "required": ["targets"],
@@ -164,7 +237,24 @@ def create_chimera_server(
         async def rollback_deployment(
             targets: list[str], generation: Optional[str] = None
         ) -> dict[str, Any]:
-            return {"status": "success", "message": "Rollback executed"}
+            try:
+                success = await rollback_deployment_use_case.execute(
+                    targets, generation
+                )
+                return {
+                    "status": "success" if success else "failed",
+                    "message": "Rollback completed" if success else "Rollback failed",
+                    "targets": targets,
+                }
+            except Exception as e:
+                return {"status": "error", "message": str(e)}
+
+    @server.resource(
+        uri="node://health",
+        description="Get health status of all known nodes",
+    )
+    async def get_node_health() -> str:
+        return json.dumps({"nodes": [], "message": "No nodes currently tracked"})
 
     if query_service:
 
@@ -173,6 +263,6 @@ def create_chimera_server(
             description="Get deployment status by session ID",
         )
         async def get_deployment(session_id: str) -> str:
-            return '{"status": "unknown"}'
+            return json.dumps({"status": "unknown"})
 
     return server

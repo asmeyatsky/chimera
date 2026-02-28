@@ -7,10 +7,11 @@ Architectural Intent:
 - Implementation can be in-memory, message queue, or MCP-based
 """
 
-from typing import Protocol, Callable, Awaitable
-from chimera.domain.entities.deployment import DomainEvent
+from typing import Protocol, Callable, Awaitable, runtime_checkable
+from chimera.domain.events.event_base import DomainEvent
 
 
+@runtime_checkable
 class EventBusPort(Protocol):
     async def publish(self, events: list[DomainEvent]) -> None: ...
 

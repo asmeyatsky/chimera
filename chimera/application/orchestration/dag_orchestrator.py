@@ -34,7 +34,7 @@ class OrchestrationError(Exception):
 class DAGOrchestrator:
     def __init__(self, steps: list[WorkflowStep]) -> None:
         self.steps: dict[str, WorkflowStep] = {s.name: s for s in steps}
-        self._validate_no_cycles()
+        self._validated = False
 
     def _validate_no_cycles(self) -> None:
         visited: set[str] = set()
@@ -64,6 +64,10 @@ class DAGOrchestrator:
                     )
 
     async def execute(self, context: dict[str, Any]) -> dict[str, Any]:
+        if not self._validated:
+            self._validate_no_cycles()
+            self._validated = True
+
         completed: dict[str, Any] = {}
         pending = set(self.steps.keys())
 
