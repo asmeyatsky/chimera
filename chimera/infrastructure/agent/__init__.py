@@ -15,6 +15,11 @@ from chimera.infrastructure.agent.chimera_agent import (
     NodeHealth,
     DriftReport,
 )
+from chimera.infrastructure.agent.agent_registry import AgentRegistry, AgentRecord
+from chimera.infrastructure.agent.orchestrator_client import (
+    InProcessOrchestratorClient,
+    MCPOrchestratorClient,
+)
 
 __all__ = [
     "ChimeraAgent",
@@ -23,4 +28,8 @@ __all__ = [
     "DriftSeverity",
     "NodeHealth",
     "DriftReport",
+    "AgentRegistry",
+    "AgentRecord",
+    "InProcessOrchestratorClient",
+    "MCPOrchestratorClient",
 ]

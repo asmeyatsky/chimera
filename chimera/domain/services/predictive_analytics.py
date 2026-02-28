@@ -158,3 +158,56 @@ class PredictiveAnalyticsService:
         """Assess risk for all nodes, sorted by risk (highest first)."""
         scores = [self.assess_risk(node) for node in nodes]
         return sorted(scores, key=lambda s: s.score, reverse=True)
+
+    def detect_trend(self, node: Node, bucket_hours: int = 24) -> list[int]:
+        """Return drift counts per time bucket (oldest first).
+
+        Useful for detecting increasing/decreasing drift trends.
+        """
+        now = datetime.now(UTC)
+        window_start = now - timedelta(hours=self._window_hours)
+
+        relevant = [
+            e for e in self._history
+            if e.node == node and e.detected_at >= window_start
+        ]
+
+        num_buckets = max(1, self._window_hours // bucket_hours)
+        buckets = [0] * num_buckets
+
+        for entry in relevant:
+            hours_ago = (now - entry.detected_at).total_seconds() / 3600
+            bucket_idx = min(num_buckets - 1, int(hours_ago / bucket_hours))
+            # Reverse index so oldest is first
+            buckets[num_buckets - 1 - bucket_idx] += 1
+
+        return buckets
+
+    def is_trending_up(self, node: Node, bucket_hours: int = 24) -> bool:
+        """Check if drift frequency is increasing over time."""
+        trend = self.detect_trend(node, bucket_hours)
+        if len(trend) < 2:
+            return False
+        # Compare second half average to first half average
+        mid = len(trend) // 2
+        first_half = sum(trend[:mid]) / max(1, mid)
+        second_half = sum(trend[mid:]) / max(1, len(trend) - mid)
+        return second_half > first_half * 1.5
+
+    def mean_time_to_resolution(self, node: Node) -> Optional[float]:
+        """Calculate average resolution time in seconds for a node."""
+        resolved = [
+            e for e in self._history
+            if e.node == node and e.resolved and e.resolution_time_seconds is not None
+        ]
+        if not resolved:
+            return None
+        return sum(e.resolution_time_seconds for e in resolved) / len(resolved)
+
+    def fleet_risk_summary(self, nodes: list[Node]) -> dict[str, int]:
+        """Return count of nodes at each risk level."""
+        scores = self.assess_fleet(nodes)
+        summary: dict[str, int] = {level.name: 0 for level in RiskLevel}
+        for score in scores:
+            summary[score.level.name] += 1
+        return summary

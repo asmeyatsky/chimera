@@ -74,3 +74,53 @@ class TestPredictiveAnalytics:
         service.record_drift(node_a, DriftSeverity.CRITICAL)
         score_b = service.assess_risk(node_b)
         assert score_b.score == 0.0
+
+    def test_detect_trend(self):
+        service = PredictiveAnalyticsService(history_window_hours=72)
+        node = Node(host="10.0.0.1")
+        now = datetime.now(UTC)
+        # 1 drift 60 hours ago, 3 drifts in last 12 hours
+        service.record_drift(node, DriftSeverity.LOW, detected_at=now - timedelta(hours=60))
+        for i in range(3):
+            service.record_drift(node, DriftSeverity.HIGH, detected_at=now - timedelta(hours=i))
+        trend = service.detect_trend(node, bucket_hours=24)
+        assert len(trend) == 3
+        # Last bucket should have more drifts than first
+        assert trend[-1] > trend[0]
+
+    def test_is_trending_up(self):
+        service = PredictiveAnalyticsService(history_window_hours=48)
+        node = Node(host="10.0.0.1")
+        now = datetime.now(UTC)
+        # No drifts in first half, many in second half
+        for i in range(5):
+            service.record_drift(node, DriftSeverity.HIGH, detected_at=now - timedelta(hours=i))
+        assert service.is_trending_up(node, bucket_hours=24) is True
+
+    def test_not_trending_up_stable(self):
+        service = PredictiveAnalyticsService(history_window_hours=48)
+        node = Node(host="10.0.0.1")
+        assert service.is_trending_up(node) is False
+
+    def test_mean_time_to_resolution(self):
+        service = PredictiveAnalyticsService()
+        node = Node(host="10.0.0.1")
+        service.record_drift(node, DriftSeverity.HIGH)
+        service.record_resolution(node, 60.0)
+        service.record_drift(node, DriftSeverity.HIGH)
+        service.record_resolution(node, 120.0)
+        mttr = service.mean_time_to_resolution(node)
+        assert mttr == 90.0
+
+    def test_mean_time_to_resolution_no_data(self):
+        service = PredictiveAnalyticsService()
+        node = Node(host="10.0.0.1")
+        assert service.mean_time_to_resolution(node) is None
+
+    def test_fleet_risk_summary(self):
+        service = PredictiveAnalyticsService()
+        nodes = [Node(host="10.0.0.1"), Node(host="10.0.0.2"), Node(host="10.0.0.3")]
+        service.record_drift(nodes[0], DriftSeverity.CRITICAL)
+        summary = service.fleet_risk_summary(nodes)
+        assert sum(summary.values()) == 3
+        assert "LOW" in summary

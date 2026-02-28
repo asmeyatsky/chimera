@@ -14,7 +14,6 @@ import os
 import asyncio
 import logging
 import traceback
-from pathlib import Path
 from chimera.infrastructure.logging import configure_logging
 from chimera.domain.value_objects.session_id import SessionId
 
@@ -72,6 +71,9 @@ async def async_main():
     watch_parser.add_argument(
         "--interval", "-i", type=int, default=10, help="Check interval in seconds"
     )
+    watch_parser.add_argument(
+        "--session", "-s", default="chimera-watch", help="Session name for healing"
+    )
     watch_parser.add_argument("--once", action="store_true", help="Run once and exit")
 
     dash_parser = subparsers.add_parser("dash", help="Launch Chimera Fleet Dashboard")
@@ -110,20 +112,13 @@ async def async_main():
     verbose = args.verbose or args.debug
 
     if args.command == "mcp":
+        from chimera.composition_root import create_container
         from chimera.infrastructure.mcp_servers.chimera_server import (
             create_chimera_server,
         )
-        from chimera.infrastructure.adapters.fabric_adapter import FabricAdapter
-        from chimera.infrastructure.adapters.nix_adapter import NixAdapter
-        from chimera.application.use_cases.deploy_fleet import DeployFleet
-        from chimera.application.use_cases.rollback_deployment import RollbackDeployment
 
-        nix_adapter = NixAdapter()
-        fabric_adapter = FabricAdapter()
-        deploy_fleet = DeployFleet(nix_adapter, fabric_adapter)
-        rollback = RollbackDeployment(fabric_adapter)
-
-        server = create_chimera_server(deploy_fleet, rollback)
+        container = create_container()
+        server = create_chimera_server(container.deploy_fleet, container.rollback)
 
         print(f"[*] Starting MCP server on {args.host}:{args.port}...")
         print("[*] MCP tools registered:")
@@ -151,16 +146,14 @@ async def async_main():
         return
 
     if args.command == "rollback":
-        from chimera.infrastructure.adapters.fabric_adapter import FabricAdapter
-        from chimera.application.use_cases.rollback_deployment import RollbackDeployment
+        from chimera.composition_root import create_container
 
-        fabric_adapter = FabricAdapter()
-        use_case = RollbackDeployment(fabric_adapter)
+        container = create_container()
 
         targets = args.targets.split(",")
         print(f"[*] Initiating Time Machine Rollback on {targets}...")
         try:
-            success = await use_case.execute(targets, args.generation)
+            success = await container.rollback.execute(targets, args.generation)
             if success:
                 print("[+] Rollback Successful.")
             else:
@@ -179,21 +172,14 @@ async def async_main():
         return
 
     if args.command == "watch":
-        from chimera.infrastructure.adapters.nix_adapter import NixAdapter
-        from chimera.infrastructure.adapters.fabric_adapter import FabricAdapter
-        from chimera.application.use_cases.deploy_fleet import DeployFleet
-        from chimera.application.use_cases.autonomous_loop import AutonomousLoop
+        from chimera.composition_root import create_container
 
-        nix_adapter = NixAdapter()
-        fabric_adapter = FabricAdapter()
-
-        deploy_fleet = DeployFleet(nix_adapter, fabric_adapter)
-        autonomous_loop = AutonomousLoop(nix_adapter, fabric_adapter, deploy_fleet)
+        container = create_container()
 
         targets = args.targets.split(",")
         try:
             print(f"[*] Starting Chimera Autonomous Watch on {targets}...")
-            await autonomous_loop.execute(
+            await container.autonomous_loop.execute(
                 args.config, args.session, targets, args.interval, args.once
             )
         except KeyboardInterrupt:
@@ -215,19 +201,13 @@ async def async_main():
         return
 
     if args.command == "run":
-        from chimera.infrastructure.adapters.nix_adapter import NixAdapter
-        from chimera.infrastructure.adapters.tmux_adapter import TmuxAdapter
-        from chimera.application.use_cases.execute_local_deployment import (
-            ExecuteLocalDeployment,
-        )
+        from chimera.composition_root import create_container
 
-        nix_adapter = NixAdapter()
-        tmux_adapter = TmuxAdapter()
-        use_case = ExecuteLocalDeployment(nix_adapter, tmux_adapter)
+        container = create_container()
 
         try:
             print(f"[*] Initializing Chimera Drift... Target: {args.session}")
-            session_id = await use_case.execute(
+            session_id = await container.execute_local.execute(
                 args.config, args.script_cmd, args.session
             )
             print(f"[+] Deployment Successful. Session '{session_id}' is active.")
@@ -243,20 +223,15 @@ async def async_main():
         return
 
     if args.command == "deploy":
-        from chimera.infrastructure.adapters.nix_adapter import NixAdapter
-        from chimera.infrastructure.adapters.fabric_adapter import FabricAdapter
-        from chimera.application.use_cases.deploy_fleet import DeployFleet
+        from chimera.composition_root import create_container
 
-        nix_adapter = NixAdapter()
-        fabric_adapter = FabricAdapter()
-
-        use_case = DeployFleet(nix_adapter, fabric_adapter)
+        container = create_container()
 
         targets = args.targets.split(",")
         try:
             print(f"[*] Deploying to fleet: {targets}...")
             print("[*] Step 1/4: Building Nix derivation...")
-            success = await use_case.execute(
+            success = await container.deploy_fleet.execute(
                 args.config, args.script_cmd, args.session, targets
             )
             if success:
@@ -280,11 +255,11 @@ async def async_main():
         return
 
     if args.command == "attach":
-        from chimera.infrastructure.adapters.tmux_adapter import TmuxAdapter
+        from chimera.composition_root import create_container
 
+        container = create_container()
         session_id = SessionId(args.session_id)
-        tmux_adapter = TmuxAdapter()
-        cmd = await tmux_adapter.attach_command(session_id)
+        cmd = await container.tmux_adapter.attach_command(session_id)
         print(f"[*] Attaching to {session_id}...")
 
         cmd_parts = cmd.split()
