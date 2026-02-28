@@ -221,3 +221,15 @@ class TestCLICommands:
 
         captured = capsys.readouterr()
         assert "Autonomous Watch" in captured.out
+
+    @pytest.mark.asyncio
+    async def test_web_help(self):
+        with patch("sys.argv", ["chimera", "web", "--help"]), \
+             pytest.raises(SystemExit, match="0"):
+            await async_main()
+
+    @pytest.mark.asyncio
+    async def test_agent_help(self):
+        with patch("sys.argv", ["chimera", "agent", "--help"]), \
+             pytest.raises(SystemExit, match="0"):
+            await async_main()

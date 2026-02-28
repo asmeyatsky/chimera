@@ -18,6 +18,9 @@ class TestCompositionRoot:
         assert container.execute_local is not None
         assert container.rollback is not None
         assert container.autonomous_loop is not None
+        assert container.agent_registry is not None
+        assert container.playbook_repository is not None
+        assert container.predictive_analytics is not None
 
     def test_deploy_fleet_uses_nix_and_fabric(self):
         from chimera.composition_root import create_container

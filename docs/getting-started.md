@@ -1,156 +1,256 @@
-# 🚀 Getting Started with Chimera
+# Getting Started with Chimera
 
-## 🎯 Quick Overview
+## Prerequisites
 
-Chimera is an **autonomous deployment engine** that combines Nix reproducibility with self-healing capabilities. Think of it as infrastructure that monitors, detects issues, and fixes itself without human intervention.
+- **Python 3.11+** (Python 3.12 also supported)
+- **Nix** package manager (for deterministic builds and deployments)
+- **tmux** (for persistent session management)
+- **SSH access** to target nodes (for fleet deployments)
 
-### 🎬 Key Concepts
+## Installation
 
-**Autonomous Healing:** Your infrastructure automatically detects when configuration drift occurs and fixes it automatically.
-
-**Time Machine Rollback:** Instantly rollback to ANY previous generation of your system.
-
-**Fleet Management:** Deploy and monitor multiple nodes from a single interface.
-
-**Real-Time Monitoring:** Beautiful dashboard showing live fleet status and health.
-
----
-
-## 🚀 Installation
-
-### Prerequisites
+### Basic installation
 
 ```bash
-# Required dependencies
-- Python 3.11+
-- Nix (for building)
-- Fabric (for remote execution)  
-- tmux (for session management)
-
-# Optional but recommended
-- docker-compose (for testing)
+pip install .
 ```
 
-### Install Chimera
+### With optional dependencies
 
 ```bash
-pip install chimera
+# SSH/remote execution support (Fabric)
+pip install ".[ssh]"
+
+# TUI dashboard (Textual)
+pip install ".[tui]"
+
+# All optional dependencies
+pip install ".[all]"
+
+# Development dependencies (pytest, ruff, etc.)
+pip install ".[dev]"
 ```
 
-### Verify Installation
+After installation, the `chimera` command is available on your PATH.
+
+## Configuration
+
+Chimera loads configuration from a JSON file and environment variables. The priority order is:
+
+1. **Environment variables** (highest priority)
+2. **Config file values**
+3. **Built-in defaults** (lowest priority)
+
+### Config file
+
+By default, Chimera looks for `chimera.json` in the current working directory. Example:
+
+```json
+{
+  "log_level": "INFO",
+  "nix": {
+    "config_path": "default.nix"
+  },
+  "fleet": {
+    "targets": ["root@10.0.0.1:22", "root@10.0.0.2:22"],
+    "session_name": "chimera-deploy"
+  },
+  "watch": {
+    "interval_seconds": 10,
+    "session_name": "chimera-watch"
+  },
+  "agent": {
+    "node_id": "node-01",
+    "heartbeat_interval": 5,
+    "drift_check_interval": 30,
+    "auto_heal": true
+  },
+  "web": {
+    "host": "127.0.0.1",
+    "port": 8080
+  },
+  "mcp": {
+    "host": "localhost",
+    "port": 8765
+  },
+  "telemetry": {
+    "endpoint": "http://localhost:4317",
+    "insecure": false
+  },
+  "itsm": {
+    "provider": "servicenow",
+    "url": "https://instance.service-now.com",
+    "username": "chimera-bot",
+    "api_key": "",
+    "project_key": ""
+  },
+  "notifications": {
+    "slack_webhook_url": "https://hooks.slack.com/services/...",
+    "pagerduty_api_key": "",
+    "email_smtp_host": "",
+    "email_smtp_port": 587,
+    "email_from": "",
+    "email_to": ""
+  }
+}
+```
+
+### Environment variables
+
+Environment variables follow the pattern `CHIMERA_SECTION_KEY` and override config file values. Examples:
 
 ```bash
-chimera --version
+export CHIMERA_FLEET_TARGETS="root@10.0.0.1:22,root@10.0.0.2:22"
+export CHIMERA_WEB_PORT=9090
+export CHIMERA_WATCH_INTERVAL_SECONDS=30
+export CHIMERA_LOG_LEVEL=DEBUG
 ```
 
----
+## Basic Usage
 
-## 🚀 5-Minute Tutorial
+### Run a command locally
 
-### Step 1: Create Your First Configuration
+Execute a command in a persistent Nix+Tmux environment:
 
 ```bash
-# Create a simple web service
-echo 'services.web.script = "echo Hello Chimera!";' > demo.nix
+chimera run "echo hello world"
+chimera run --config my-env.nix --session my-session "python app.py"
 ```
 
-### Step 2: Deploy Locally with Persistent Session
+Options:
+- `--config, -c` -- Path to Nix config file (default: `default.nix`)
+- `--session, -s` -- Tmux session name (default: `chimera-default`)
+
+### Attach to a session
+
+Reconnect to a running Chimera session:
 
 ```bash
-chimera run -c demo.nix -s my-session "echo '🔥 Chimera Active!'"
+chimera attach chimera-default
 ```
 
-### Step 3: Try Autonomous Healing
+### Deploy to a fleet
+
+Deploy a command across multiple remote nodes:
 
 ```bash
-# In a separate terminal, watch for drift
-chimera watch -t "localhost" -c demo.nix
-
-# Now break the configuration and watch it heal itself!
+chimera deploy --targets root@10.0.0.1:22,root@10.0.0.2:22 "nixos-rebuild switch"
+chimera deploy -t node1,node2,node3 -c production.nix "systemctl restart myapp"
 ```
 
-### Step 4: Deploy to a Fleet
+Options:
+- `--targets, -t` (required) -- Comma-separated list of target nodes
+- `--config, -c` -- Path to Nix config file (default: `default.nix`)
+- `--session, -s` -- Remote session name (default: `chimera-deploy`)
+
+### Rollback a deployment
+
+Roll back nodes to a previous NixOS generation:
 
 ```bash
-# Replace with your actual servers
-chimera deploy -t "user@server1:22,user@server2:22,user@server3:22" -c production.nix "echo '🚀 Production Ready!'"
+chimera rollback --targets root@10.0.0.1:22,root@10.0.0.2:22
+chimera rollback -t node1,node2 --generation 42
 ```
 
----
+Options:
+- `--targets, -t` (required) -- Comma-separated list of target nodes
+- `--generation, -g` -- Specific generation number to roll back to (optional; defaults to previous)
 
-## 🎯 Your First Autonomous Deployment
+### Autonomous drift watch
 
-### Basic Fleet Deployment
+Start continuous drift detection and self-healing:
 
 ```bash
-# Deploy to multiple nodes
-chimera deploy -t "user@server1,user@server2,user@server3" -c config.nix "your-application-command"
-
-# Start autonomous monitoring
-chimera watch -t "user@server1,user@server2,user@server3"
+chimera watch --targets root@10.0.0.1:22,root@10.0.0.2:22
+chimera watch -t node1,node2 --interval 30 --config production.nix
+chimera watch -t node1 --once  # Run a single check and exit
 ```
 
-### What Happens Now?
+Options:
+- `--targets, -t` (required) -- Comma-separated list of target nodes
+- `--config, -c` -- Path to Nix config file (default: `default.nix`)
+- `--interval, -i` -- Check interval in seconds (default: `10`)
+- `--session, -s` -- Session name for healing (default: `chimera-watch`)
+- `--once` -- Run once and exit
 
-1. **Continuous Monitoring**: Chimera checks your fleet every 10 seconds
-2. **Drift Detection**: If any node's state diverges from expected, it's flagged immediately  
-3. **Automatic Healing**: Chimera redeploys the correct configuration
-4. **Time Machine**: Rollback to any previous generation if needed
-5. **Real-Time Dashboard**: Visual dashboard shows live fleet status
+### Fleet dashboard (TUI)
 
----
-
-## 🎛️ Troubleshooting
-
-### Common Issues
-
-**"chimera: command not found"**
-```bash
-# Ensure pip installation is in PATH
-pip show chimera
-# Or run with python -m chimera
-python -m chimera <command>
-```
-
-**Build Failures**
-```bash
-# Ensure Nix is installed and accessible
-nix --version
-# Check PATH includes Nix store paths
-```
-
-**Connection Issues**
-```bash
-# Test SSH connectivity
-ssh user@your-server "echo 'connection test'"
-# Check that your user has necessary permissions
-```
-
-### Getting Help
+Launch an interactive terminal dashboard for fleet monitoring:
 
 ```bash
-chimera --help
-chimera <command> --help
+chimera dash --targets root@10.0.0.1:22,root@10.0.0.2:22
 ```
 
----
+Requires the `tui` optional dependency (`pip install ".[tui]"`).
 
-## 📚 Next Steps
+### Web dashboard
 
-- **Read [Architecture Overview](../architecture.md)** - Understand the design
-- **Try [Fleet Management](../fleet-management.md)** - Scale your deployment
-- **Explore [Autonomous Healing](../autonomous-healing.md)** - Deep dive into self-healing
-- **Learn [Time Machine Rollbacks](../time-machine.md)** - Master rollback capabilities
+Start a web-based dashboard:
 
----
+```bash
+chimera web
+chimera web --port 9090 --host 0.0.0.0
+```
 
-## 🤝 Need Help?
+Options:
+- `--port, -p` -- Web server port (default: `8080`)
+- `--host` -- Web server bind address (default: `127.0.0.1`)
 
-- **Documentation**: Check the `docs/` folder for detailed guides
-- **Community**: [Discord Server](https://discord.gg/chimera)
-- **Issues**: [GitHub Issues](https://github.com/asmeyatsky/chimera/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/asmeyatsky/chimera/discussions)
+## Running the MCP Server
 
----
+Start the MCP server to expose Chimera's deployment capabilities to AI agents:
 
-*Ready to make your infrastructure autonomous? Let's get started!* 🚀
+```bash
+chimera mcp
+chimera mcp --port 9000 --host 0.0.0.0
+```
+
+Options:
+- `--port, -p` -- MCP server port (default: `8765`)
+- `--host` -- MCP server bind address (default: `localhost`)
+
+The server registers tools (`execute_deployment`, `rollback_deployment`, `check_congruence`) and resources (`node://health`, `deployment://{session_id}`) for programmatic interaction.
+
+## Running the Node Agent
+
+Start the Chimera agent daemon on a managed node:
+
+```bash
+chimera agent --node-id node-01
+chimera agent --node-id node-01 --heartbeat 10 --drift-interval 60
+chimera agent --node-id node-01 --no-auto-heal
+```
+
+Options:
+- `--node-id` (required) -- Unique identifier for this node
+- `--heartbeat` -- Heartbeat interval in seconds (default: `5`)
+- `--drift-interval` -- Drift check interval in seconds (default: `30`)
+- `--no-auto-heal` -- Disable automatic healing
+
+## Running Tests
+
+```bash
+# Install dev dependencies
+pip install ".[dev]"
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=chimera
+
+# Run a specific test file
+pytest tests/test_deployment.py
+```
+
+## Logging and Debug Output
+
+Use `--verbose` or `--debug` flags on any command for more output:
+
+```bash
+chimera --verbose deploy -t node1 "nixos-rebuild switch"
+chimera --debug watch -t node1,node2
+```
+
+- `--verbose, -v` -- Sets log level to INFO
+- `--debug` -- Sets log level to DEBUG and shows full tracebacks on error

@@ -14,6 +14,9 @@ from chimera.infrastructure.adapters.tmux_adapter import TmuxAdapter
 from chimera.application.use_cases.deploy_fleet import DeployFleet
 from chimera.application.use_cases.rollback_deployment import RollbackDeployment
 from chimera.application.use_cases.execute_local_deployment import ExecuteLocalDeployment
+from chimera.infrastructure.agent.agent_registry import AgentRegistry
+from chimera.infrastructure.repositories.playbook_repository import PlaybookRepository
+from chimera.domain.services.predictive_analytics import PredictiveAnalyticsService
 
 
 class TestCompositionRootWiring:
@@ -24,6 +27,9 @@ class TestCompositionRootWiring:
         assert isinstance(container.deploy_fleet, DeployFleet)
         assert isinstance(container.rollback, RollbackDeployment)
         assert isinstance(container.execute_local, ExecuteLocalDeployment)
+        assert isinstance(container.agent_registry, AgentRegistry)
+        assert isinstance(container.playbook_repository, PlaybookRepository)
+        assert isinstance(container.predictive_analytics, PredictiveAnalyticsService)
 
     def test_shared_adapter_instances(self):
         """Use cases share the same adapter instances."""

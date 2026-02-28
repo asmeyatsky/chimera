@@ -13,5 +13,6 @@ from chimera.infrastructure.mcp_servers.chimera_server import (
     MCPTool,
     MCPResource,
 )
+from chimera.infrastructure.mcp_servers.stdio_transport import run_stdio
 
-__all__ = ["MCPServer", "create_chimera_server", "MCPTool", "MCPResource"]
+__all__ = ["MCPServer", "create_chimera_server", "MCPTool", "MCPResource", "run_stdio"]

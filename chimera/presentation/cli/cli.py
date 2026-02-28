@@ -95,9 +95,35 @@ async def async_main():
         "mcp", help="Start MCP server for agentic interactions"
     )
     mcp_parser.add_argument(
-        "--port", "-p", type=int, default=8765, help="MCP server port"
+        "--transport",
+        choices=["stdio"],
+        default="stdio",
+        help="Transport type (default: stdio)",
     )
-    mcp_parser.add_argument("--host", default="localhost", help="MCP server host")
+
+    web_parser = subparsers.add_parser(
+        "web", help="Start the Chimera Web Dashboard"
+    )
+    web_parser.add_argument(
+        "--port", "-p", type=int, default=8080, help="Web server port"
+    )
+    web_parser.add_argument("--host", default="127.0.0.1", help="Web server host")
+
+    agent_parser = subparsers.add_parser(
+        "agent", help="Start the Chimera node agent"
+    )
+    agent_parser.add_argument(
+        "--node-id", required=True, help="Unique identifier for this node"
+    )
+    agent_parser.add_argument(
+        "--heartbeat", type=int, default=5, help="Heartbeat interval in seconds"
+    )
+    agent_parser.add_argument(
+        "--drift-interval", type=int, default=30, help="Drift check interval in seconds"
+    )
+    agent_parser.add_argument(
+        "--no-auto-heal", action="store_true", help="Disable automatic healing"
+    )
 
     args = parser.parse_args()
 
@@ -116,25 +142,13 @@ async def async_main():
         from chimera.infrastructure.mcp_servers.chimera_server import (
             create_chimera_server,
         )
+        from chimera.infrastructure.mcp_servers.stdio_transport import run_stdio
 
         container = create_container()
         server = create_chimera_server(container.deploy_fleet, container.rollback)
 
-        print(f"[*] Starting MCP server on {args.host}:{args.port}...")
-        print("[*] MCP tools registered:")
-
-        async def run_server():
-            tools = await server.list_tools()
-            for tool in tools:
-                print(f"  - {tool.name}: {tool.description}")
-            print("[*] MCP server running. Press Ctrl+C to stop.")
-            while True:
-                await asyncio.sleep(1)
-
-        try:
-            asyncio.run(run_server())
-        except KeyboardInterrupt:
-            print("\n[*] MCP server stopped.")
+        if args.transport == "stdio":
+            await run_stdio(server)
         return
 
     if args.command == "dash":
@@ -267,6 +281,50 @@ async def async_main():
             os.execvp(cmd_parts[0], cmd_parts)
         except FileNotFoundError:
             print("[-] Error: tmux not found. Install tmux and try again.")
+        return
+
+    if args.command == "web":
+        from chimera.composition_root import create_container
+        from chimera.presentation.web.app import ChimeraWebApp
+
+        container = create_container()
+        app = ChimeraWebApp(
+            registry=container.agent_registry,
+            rollback=container.rollback,
+        )
+
+        print(f"[*] Starting Chimera Web Dashboard on http://{args.host}:{args.port}")
+        print("[*] Press Ctrl+C to stop.")
+        try:
+            await app.start(args.host, args.port)
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            app.stop()
+            print("\n[*] Web dashboard stopped.")
+        return
+
+    if args.command == "agent":
+        from chimera.infrastructure.agent.chimera_agent import ChimeraAgent, AgentConfig
+
+        config = AgentConfig(
+            node_id=args.node_id,
+            heartbeat_interval=args.heartbeat,
+            drift_check_interval=args.drift_interval,
+            auto_heal=not args.no_auto_heal,
+        )
+        agent = ChimeraAgent(config)
+
+        print(f"[*] Starting Chimera Agent: {args.node_id}")
+        print(f"[*] Heartbeat: {args.heartbeat}s, Drift check: {args.drift_interval}s")
+        print("[*] Press Ctrl+C to stop.")
+        try:
+            await agent.start()
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            await agent.stop()
+            print(f"\n[*] Agent {args.node_id} stopped.")
         return
 
     parser.print_help()
